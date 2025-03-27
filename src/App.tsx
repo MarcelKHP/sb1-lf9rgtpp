@@ -1,10 +1,11 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { getCurrentUser } from './lib/auth';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';
 import RequestDetails from './components/RequestDetails';
 import ChangeRequestForm from './components/ChangeRequestForm';
+import NewRequest from './components/NewRequest'; // Example for other routes
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
@@ -22,7 +23,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/auth" element={<AuthForm />} />
         <Route
@@ -49,8 +50,10 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/new" element={<NewRequest />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
