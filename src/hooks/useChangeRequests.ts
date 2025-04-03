@@ -10,6 +10,9 @@ export function useChangeRequests() {
   useEffect(() => {
     async function fetchRequests() {
       try {
+        const user = await supabase.auth.getUser();
+        console.log('Authenticated user:', user);
+
         const { data, error } = await supabase
           .from('change_requests')
           .select(`
@@ -22,9 +25,14 @@ export function useChangeRequests() {
           `)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching change requests:', error);
+          throw error;
+        }
+
         setRequests(data);
       } catch (err) {
+        console.error('Failed to fetch requests:', err);
         setError(err instanceof Error ? err : new Error('Failed to fetch requests'));
       } finally {
         setIsLoading(false);

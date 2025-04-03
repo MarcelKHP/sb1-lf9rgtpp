@@ -6,7 +6,30 @@ import { generateChangeRequestDoc } from '../utils/docx';
 import { sendChangeRequestEmail } from '../utils/email';
 import { ApprovalWorkflow } from './ApprovalWorkflow';
 import { FileUpload } from './FileUpload';
-import type { ChangeRequest } from '../types';
+import type { RequestStatus } from '../types';
+
+interface ApprovalWorkflowProps {
+  currentStatus: RequestStatus;
+  onUpdateStatus: (status: RequestStatus) => Promise<void>;
+  isApprover: boolean;
+}
+
+export type ChangeRequest = {
+  id: string;
+  title: string;
+  description: string;
+  status: RequestStatus;
+  change_type: string;
+  impact_level: string;
+  expected_downtime: string;
+  rollback_plan?: string;
+  approver_email: string; // Added approver_email property
+  attachments?: Array<{
+    id: string;
+    name: string;
+    url: string;
+  }>;
+};
 
 export default function RequestDetails() {
   const { id } = useParams();
@@ -46,7 +69,7 @@ export default function RequestDetails() {
     }
   }, [id]);
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: RequestStatus) => {
     try {
       const { error } = await supabase
         .from('change_requests')

@@ -17,11 +17,10 @@ export default function AuthForm() {
     try {
       if (isSignUp) {
         await signUp(email, password);
-        navigate('/dashboard');
       } else {
         await signIn(email, password);
-        navigate('/dashboard');
       }
+      navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }

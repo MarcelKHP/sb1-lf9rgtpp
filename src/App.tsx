@@ -10,7 +10,9 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
-    getCurrentUser().then(user => setIsAuthenticated(!!user));
+    getCurrentUser()
+      .then(user => setIsAuthenticated(!!user))
+      .catch(() => setIsAuthenticated(false)); // Handle errors gracefully
   }, []);
 
   if (isAuthenticated === null) {
@@ -49,6 +51,7 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

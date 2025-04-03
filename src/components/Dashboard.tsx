@@ -1,7 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Filter, Search } from 'lucide-react';
-import { useChangeRequests } from '../hooks/useChangeRequests';
+import { supabase } from '../supabaseClient';
+
+export function useChangeRequests() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchRequests() {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('change_requests')
+          .select('*,attachments(id,name,url)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setRequests(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRequests();
+  }, []);
+
+  return { requests, isLoading, error };
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -59,33 +88,37 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4">
-        {filteredRequests?.map((request) => (
-          <div
-            key={request.id}
-            onClick={() => navigate(`/request/${request.id}`)}
-            className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-lg">{request.title}</h3>
-                <p className="text-gray-600 text-sm mt-1">{request.description}</p>
+      {filteredRequests?.length === 0 ? (
+        <div className="text-gray-500 text-center">No requests found matching the criteria.</div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredRequests.map((request) => (
+            <div
+              key={request.id}
+              onClick={() => navigate(`/request/${request.id}`)}
+              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg">{request.title}</h3>
+                  <p className="text-gray-600 text-sm mt-1">{request.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(request.status)}`}>
+                    {request.status}
+                  </span>
+                  <FileText className="h-5 w-5 text-gray-400" />
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(request.status)}`}>
-                  {request.status}
-                </span>
-                <FileText className="h-5 w-5 text-gray-400" />
+              <div className="mt-4 flex gap-4 text-sm text-gray-500">
+                <span>Type: {request.change_type}</span>
+                <span>Impact: {request.impact_level}</span>
+                <span>Created: {new Date(request.created_at).toLocaleDateString()}</span>
               </div>
             </div>
-            <div className="mt-4 flex gap-4 text-sm text-gray-500">
-              <span>Type: {request.change_type}</span>
-              <span>Impact: {request.impact_level}</span>
-              <span>Created: {new Date(request.created_at).toLocaleDateString()}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

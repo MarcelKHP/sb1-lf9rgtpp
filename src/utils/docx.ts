@@ -1,4 +1,4 @@
-import { Document, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle } from 'docx';
+import { Document, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, Packer } from 'docx';
 import { saveAs } from 'file-saver';
 import type { ChangeRequest } from '../types';
 
@@ -62,6 +62,6 @@ export async function generateChangeRequestDoc(request: ChangeRequest) {
     }]
   });
 
-  const blob = await doc.save('blob');
+  const blob = await Packer.toBlob(doc);
   saveAs(blob, `change-request-${request.id}.docx`);
 }
