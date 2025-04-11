@@ -1,57 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { getCurrentUser } from './lib/auth';
-import AuthForm from './components/AuthForm';
+import { supabase } from './lib/supabase';
+import { Session } from '@supabase/supabase-js';
 import Dashboard from './components/Dashboard';
-import RequestDetails from './components/RequestDetails';
-import ChangeRequestForm from './components/ChangeRequestForm';
+import CreateRequest from './components/CreateRequest';
+import AuthForm from './components/AuthForm';
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
+function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
-    getCurrentUser()
-      .then(user => setIsAuthenticated(!!user))
-      .catch(() => setIsAuthenticated(false)); // Handle errors gracefully
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (isAuthenticated === null) {
+  if (loading) {
     return <div>Loading...</div>;
   }
 
-  return isAuthenticated ? <>{children}</> : <Navigate to="/auth" />;
-}
-
-function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/auth" element={<AuthForm />} />
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/new"
-          element={
-            <PrivateRoute>
-              <ChangeRequestForm />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/request/:id"
-          element={
-            <PrivateRoute>
-              <RequestDetails />
-            </PrivateRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/login" element={!session ? <AuthForm /> : <Navigate to="/" />} />
+        <Route path="/" element={session ? <Dashboard /> : <Navigate to="/login" />} />
+        <Route path="/new" element={session ? <CreateRequest /> : <Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

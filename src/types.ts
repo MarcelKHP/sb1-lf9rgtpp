@@ -1,6 +1,6 @@
 export type ChangeType = 'Software' | 'Hardware' | 'Network' | 'Security' | 'Other';
 export type ImpactLevel = 'Low' | 'Medium' | 'High';
-export type RequestStatus = 'Pending' | 'Approved' | 'Implemented' | 'Completed';
+export type RequestStatus = 'Pending' | 'Approved' | 'Denied' | 'Implemented' | 'Completed';
 
 export interface Attachment {
   name: string;

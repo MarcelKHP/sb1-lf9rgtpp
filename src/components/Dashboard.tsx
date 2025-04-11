@@ -1,141 +1,119 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Filter, Search } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
 
-export function useChangeRequests() {
-  const [requests, setRequests] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchRequests() {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('change_requests')
-          .select('*,attachments(id,name,url)')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setRequests(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchRequests();
-  }, []);
-
-  return { requests, isLoading, error };
+interface ChangeRequest {
+    id: number;
+    title: string;
+    description: string;
+    status: string;
+    created_at: string;
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const { requests, isLoading, error } = useChangeRequests();
-  const [filter, setFilter] = React.useState('all');
-  const [search, setSearch] = React.useState('');
+    const [requests, setRequests] = useState<ChangeRequest[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
 
-  const filteredRequests = requests?.filter(request => {
-    const matchesFilter = filter === 'all' || request.status.toLowerCase() === filter;
-    const matchesSearch = request.title.toLowerCase().includes(search.toLowerCase()) ||
-      request.description.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+    useEffect(() => {
+        fetchRequests();
+    }, []);
 
-  if (isLoading) return <div className="flex justify-center p-8">Loading...</div>;
-  if (error) return <div className="text-red-600 p-8">Error loading requests</div>;
+    async function fetchRequests() {
+        try {
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError || !sessionData.session) {
+                throw new Error('Please log in to view requests');
+            }
 
-  return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Change Requests</h1>
-        <button
-          onClick={() => navigate('/new')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          New Request
-        </button>
-      </div>
+            const { data, error } = await supabase
+                .from('change_requests')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-      <div className="flex gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search requests..."
-            className="pl-10 pr-4 py-2 w-full border rounded-lg"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="relative">
-          <Filter className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-          <select
-            className="pl-10 pr-4 py-2 border rounded-lg appearance-none bg-white"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="denied">Denied</option>
-            <option value="implemented">Implemented</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-      </div>
+            if (error) throw error;
+            setRequests(data || []);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load requests');
+            console.error('Error:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
 
-      {filteredRequests?.length === 0 ? (
-        <div className="text-gray-500 text-center">No requests found matching the criteria.</div>
-      ) : (
-        <div className="grid gap-4">
-          {filteredRequests.map((request) => (
-            <div
-              key={request.id}
-              onClick={() => navigate(`/request/${request.id}`)}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-lg">{request.title}</h3>
-                  <p className="text-gray-600 text-sm mt-1">{request.description}</p>
+    const handleLogout = async () => {
+        try {
+            await supabase.auth.signOut();
+            navigate('/login');
+        } catch (error) {
+            console.error('Error logging out:', error);
+        }
+    };
+
+    const handleNewRequest = () => {
+        navigate('/new');
+    };
+
+    if (loading) return <div className="p-4">Loading...</div>;
+
+    return (
+        <div className="container mx-auto p-4">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Change Requests</h1>
+                <div className="space-x-4">
+                    <button
+                        onClick={handleNewRequest}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    >
+                        New Request
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                    >
+                        Logout
+                    </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(request.status)}`}>
-                    {request.status}
-                  </span>
-                  <FileText className="h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-              <div className="mt-4 flex gap-4 text-sm text-gray-500">
-                <span>Type: {request.change_type}</span>
-                <span>Impact: {request.impact_level}</span>
-                <span>Created: {new Date(request.created_at).toLocaleDateString()}</span>
-              </div>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
-function getStatusColor(status: string) {
-  switch (status.toLowerCase()) {
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'approved':
-      return 'bg-green-100 text-green-800';
-    case 'denied':
-      return 'bg-red-100 text-red-800';
-    case 'implemented':
-      return 'bg-blue-100 text-blue-800';
-    case 'completed':
-      return 'bg-purple-100 text-purple-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    {error}
+                </div>
+            )}
+
+            <div className="bg-white shadow-md rounded my-6">
+                <table className="min-w-full table-auto">
+                    <thead>
+                        <tr className="bg-gray-200 text-gray-600 uppercase text-sm">
+                            <th className="py-3 px-4 text-left">Title</th>
+                            <th className="py-3 px-4 text-left">Description</th>
+                            <th className="py-3 px-4 text-left">Status</th>
+                            <th className="py-3 px-4 text-left">Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-gray-600">
+                        {requests.map((request) => (
+                            <tr key={request.id} className="border-b border-gray-200 hover:bg-gray-100">
+                                <td className="py-3 px-4">{request.title}</td>
+                                <td className="py-3 px-4">{request.description}</td>
+                                <td className="py-3 px-4">{request.status}</td>
+                                <td className="py-3 px-4">
+                                    {new Date(request.created_at).toLocaleDateString()}
+                                </td>
+                            </tr>
+                        ))}
+                        {requests.length === 0 && !loading && (
+                            <tr>
+                                <td colSpan={4} className="py-4 px-4 text-center">
+                                    No requests found
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 }

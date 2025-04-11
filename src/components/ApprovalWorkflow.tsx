@@ -1,16 +1,17 @@
 import React from 'react';
 import { CheckCircle, XCircle, AlertCircle, PlayCircle, CheckCircle2 } from 'lucide-react';
+import type { RequestStatus } from '../types';
 
 interface ApprovalWorkflowProps {
-  currentStatus: string;
-  onUpdateStatus: (status: string) => Promise<void>;
+  currentStatus: RequestStatus;
+  onUpdateStatus: (status: RequestStatus) => Promise<void>;
   isApprover: boolean;
 }
 
 export function ApprovalWorkflow({ currentStatus, onUpdateStatus, isApprover }: ApprovalWorkflowProps) {
   const [isUpdating, setIsUpdating] = React.useState(false);
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: RequestStatus) => {
     setIsUpdating(true);
     try {
       await onUpdateStatus(newStatus);
